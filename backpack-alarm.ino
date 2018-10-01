@@ -2,7 +2,7 @@
 #include <MFRC522.h>
 #include <Wire.h>
 
-#define INTERVALO_SOM 2000
+#define DISPARO 3000
 #define SS_PIN 10
 #define RST_PIN 9
 #define LED_PIN 8
@@ -14,88 +14,90 @@ bool trava = LOW;
 bool alarme = false;
 bool som = LOW;
 
-const int MPU=0x68;
+const int MPU = 0x68;
 int AcX, AcY, AcZ, GyX, GyY, GyZ;
 int AcX_lock, AcY_lock, AcZ_lock, GyX_lock, GyY_lock, GyZ_lock;
 
-void setup() 
+void setup()
 {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
-  Serial.begin(9600);
   SPI.begin();
   mfrc522.PCD_Init();
   Wire.begin();
   Wire.beginTransmission(MPU);
-  Wire.write(0x6B); 
-  Wire.write(0); 
+  Wire.write(0x6B);
+  Wire.write(0);
   Wire.endTransmission(true);
+  Wire.beginTransmission(MPU);
+  Wire.write(0x3B);
+  Wire.endTransmission(false);
+  Wire.requestFrom(MPU, 14, true);
+  for (int i = 0; i < 7; i++)
+  {
+    Wire.read() << 8 | Wire.read();
+  }
 }
 
-bool diffAc(int now, int locked)
+bool diff(int now, int locked)
 {
-  return (locked - now) > 200 || (locked - now) < 200;
+  if (locked > now)
+  {
+    return (locked - now) > DISPARO;
+  }
+  else
+  {
+    return (now - locked) > DISPARO;
+  }
 }
 
-bool diffGy(int now, int locked)
-{
-  return (locked - now) > 100 || (locked - now) < 100;
-}
- 
-void loop() 
+void loop()
 {
   if (trava)
   {
-      Wire.beginTransmission(MPU);
-      Wire.write(0x3B);
-      Wire.endTransmission(false);
-      Wire.requestFrom(MPU,14,true);  
-      AcX=Wire.read()<<8|Wire.read(); 
-      AcY=Wire.read()<<8|Wire.read();
-      AcZ=Wire.read()<<8|Wire.read();
-      Wire.read()<<8|Wire.read();
-      GyX=Wire.read()<<8|Wire.read();
-      GyY=Wire.read()<<8|Wire.read();
-      GyZ=Wire.read()<<8|Wire.read();
+    Wire.beginTransmission(MPU);
+    Wire.write(0x3B);
+    Wire.endTransmission(false);
+    Wire.requestFrom(MPU, 14, true);
+    AcX = Wire.read() << 8 | Wire.read();
+    AcY = Wire.read() << 8 | Wire.read();
+    AcZ = Wire.read() << 8 | Wire.read();
+    Wire.read() << 8 | Wire.read();
+    GyX = Wire.read() << 8 | Wire.read();
+    GyY = Wire.read() << 8 | Wire.read();
+    GyZ = Wire.read() << 8 | Wire.read();
 
-      Serial.println(AcX);
-      Serial.println(AcY);
-      Serial.println(AcZ);
-      Serial.println(GyX);
-      Serial.println(GyY);
-      Serial.println(GyZ);
-      Serial.println();
-
-      if (diffAc(AcX, AcX_lock) || diffAc(AcY, AcY_lock) || diffAc(AcZ, AcZ_lock) ||
-          diffGy(GyX, GyX_lock), diffGy(GyY, GyY_lock), diffGy(GyZ, GyZ_lock))
-      {
-        alarme = true;
-      }
+    if (diff(AcX, AcX_lock) || diff(AcY, AcY_lock) || diff(AcZ, AcZ_lock) ||
+        diff(GyX, GyX_lock), diff(GyY, GyY_lock), diff(GyZ, GyZ_lock))
+    {
+      alarme = true;
+    }
   }
 
   if (alarme) {
     som = !som;
     digitalWrite(BUZZER_PIN, som);
+    delay(200);
   }
-  
-  if ( ! mfrc522.PICC_IsNewCardPresent()) 
+
+  if ( ! mfrc522.PICC_IsNewCardPresent())
   {
     return;
   }
-  
-  if ( ! mfrc522.PICC_ReadCardSerial()) 
+
+  if ( ! mfrc522.PICC_ReadCardSerial())
   {
     return;
   }
-  
-  String conteudo= "";
+
+  String conteudo = "";
   byte letra;
-  for (byte i = 0; i < mfrc522.uid.size; i++) 
+  for (byte i = 0; i < mfrc522.uid.size; i++)
   {
-     conteudo.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " "));
-     conteudo.concat(String(mfrc522.uid.uidByte[i], HEX));
+    conteudo.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " "));
+    conteudo.concat(String(mfrc522.uid.uidByte[i], HEX));
   }
   conteudo.toUpperCase();
 
@@ -108,16 +110,16 @@ void loop()
       Wire.beginTransmission(MPU);
       Wire.write(0x3B);
       Wire.endTransmission(false);
-      Wire.requestFrom(MPU,14,true);  
-      AcX_lock=Wire.read()<<8|Wire.read();
-      AcY_lock=Wire.read()<<8|Wire.read();
-      AcZ_lock=Wire.read()<<8|Wire.read();
-      Wire.read()<<8|Wire.read();
-      GyX_lock=Wire.read()<<8|Wire.read();
-      GyY_lock=Wire.read()<<8|Wire.read();
-      GyZ_lock=Wire.read()<<8|Wire.read();
+      Wire.requestFrom(MPU, 14, true);
+      AcX_lock = Wire.read() << 8 | Wire.read();
+      AcY_lock = Wire.read() << 8 | Wire.read();
+      AcZ_lock = Wire.read() << 8 | Wire.read();
+      Wire.read() << 8 | Wire.read();
+      GyX_lock = Wire.read() << 8 | Wire.read();
+      GyY_lock = Wire.read() << 8 | Wire.read();
+      GyZ_lock = Wire.read() << 8 | Wire.read();
     }
-    delay(trava ? (3000 - INTERVALO_SOM) : 1);
+    delay(3000);
   }
-  delay(INTERVALO_SOM);
-} 
+  delay(300);
+}
