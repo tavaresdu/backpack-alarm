@@ -2,7 +2,7 @@
 #include <MFRC522.h>
 #include <Wire.h>
 
-#define DISPARO 3000
+#define DISPARO 2000
 #define SS_PIN 10
 #define RST_PIN 9
 #define LED_PIN 8
@@ -105,6 +105,8 @@ void loop()
   {
     trava = !trava;
     alarme = false;
+    som = LOW;
+    digitalWrite(BUZZER_PIN, LOW);
     digitalWrite(LED_PIN, trava);
     if (trava) {
       Wire.beginTransmission(MPU);
